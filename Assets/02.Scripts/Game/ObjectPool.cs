@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class ObjectPool : MonoBehaviour
 {
-    public GameObject Prefab;
-    public int poolSize;
+    [SerializeField] private GameObject prefab;
+    [SerializeField] int poolSize;
+    [SerializeField] private RectTransform parent;
 
     private Queue<GameObject> _pool;
     
@@ -31,7 +32,7 @@ public class ObjectPool : MonoBehaviour
     /// </summary>
     private void CreateNewObject()
     {
-        GameObject newObject = Instantiate(Prefab);
+        GameObject newObject = Instantiate(prefab, parent);
         newObject.SetActive(false);
         _pool.Enqueue(newObject);
     }
@@ -44,9 +45,9 @@ public class ObjectPool : MonoBehaviour
     {
         if (_pool.Count == 0) CreateNewObject();
         
-        GameObject card = _pool.Dequeue();
-        card.SetActive(true);
-        return card;
+        GameObject dequeObject = _pool.Dequeue();
+        dequeObject.SetActive(true);
+        return dequeObject;
     }
 
     /// <summary>
