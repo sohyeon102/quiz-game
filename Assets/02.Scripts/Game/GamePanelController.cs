@@ -5,55 +5,93 @@ using UnityEngine;
 
 public class GamePanelController : MonoBehaviour
 {
-    [SerializeField] private GameObject quizCardPrefab;            // Quiz Card Prefab
-    [SerializeField] private Transform quizCardParent;             // Quiz Card가 표시될 UI Parent
-    private List<GameObject> quizCards = new List<GameObject>();
+    private GameObject _firstQuizCardObject;
+    private GameObject _secondQuizCardObject;
     
-    
-    void Start()
+    private List<QuizData> _quizDataList;
+    private Queue<QuizData> _quizQueue; // Queue로 퀴즈 데이터 관리
+    private int _quizIndex = 0; // 현재 퀴즈 진행 상태 추적
+    private int _currentQuizIndex = 0;  // 현재 표시 중인 퀴즈 번호
+    private int _quizCount = 10;        // 총 퀴즈 개수
+
+    private void Start()
     {
-        InitQuizCard();
+        //테스트
+        _quizDataList = QuizDataController.LoadQuizData(0);
+        _quizQueue = new Queue<QuizData>(_quizDataList); //
+        
+        InitQuizCards();
     }
 
-    private void InitQuizCard()
+    private void InitQuizCards()
     {
-        for (int i = 0; i < 3; i++)
+        _firstQuizCardObject = ObjectPool.Instance.GetObject();
+        _secondQuizCardObject = ObjectPool.Instance.GetObject();
+
+        // 퀴즈 데이터를 설정
+        _firstQuizCardObject.GetComponent<QuizCardController>().SetQuiz(_quizDataList[_currentQuizIndex], OnCompletedQuiz);
+    
+        _currentQuizIndex = (_currentQuizIndex + 1) % _quizCount; // 다음 문제로 이동
+        _secondQuizCardObject.GetComponent<QuizCardController>().SetQuiz(_quizDataList[_currentQuizIndex], OnCompletedQuiz);
+    
+        SetQuizCardPosition(_firstQuizCardObject, 0);
+        SetQuizCardPosition(_secondQuizCardObject, 1);
+    }
+
+    
+    private void OnCompletedQuiz(int cardIndex)
+    {
+        
+    }
+
+    
+    private void SetQuizCardPosition(GameObject quizCardObject, int index)
+    {
+        var quizCardTransform = quizCardObject.GetComponent<RectTransform>();
+    
+        if (index == 0)
         {
-            var card = ObjectPool.Instance.GetObject();
-            card.transform.SetParent(quizCardParent, false);
-            card.transform.localScale = Vector3.one; 
-            card.AddComponent<QuizCardController>();  
-            quizCards.Add(card);
+            quizCardTransform.anchoredPosition = new Vector2(0, 0);
+            quizCardTransform.localScale = Vector3.one;
+            quizCardTransform.SetAsLastSibling();
         }
-
-        ArrangeCards();
-    }
-    
-    private void ArrangeCards()
-    {
-        for (int i = 0; i < quizCards.Count; i++)
+        else if (index == 1)
         {
-            quizCards[i].transform.SetSiblingIndex(i);
-
-            // 두번째 카드 위치 위로 
-            float offsetY = 0f;
-            if (i == 1)
-            {
-                offsetY = 50f;
-            }
-            quizCards[i].transform.DOLocalMove(new Vector3(0, offsetY, 0), 0.5f);
+            quizCardTransform.anchoredPosition = new Vector2(0, 160);
+            quizCardTransform.localScale = Vector3.one * 0.9f;
+            quizCardTransform.SetAsFirstSibling();
         }
     }
-    
-    public void CardToBack()
+
+    private void ChangeQuizCard()
     {
-        if (quizCards.Count < 3) return;
+        /*var temp = _firstQuizCardObject;
+        _firstQuizCardObject = _secondQuizCardObject;
+        _secondQuizCardObject = ObjectPool.Instance.GetObject();
+        SetQuizCardPosition(_firstQuizCardObject, index: 0);
+        SetQuizCardPosition(_secondQuizCardObject, index: 1);
         
-        GameObject firstCard = quizCards[0];
-        quizCards.RemoveAt(0);
+        ObjectPool.Instance.ReturnObject(temp);*/
         
-        quizCards.Add(firstCard);
-        
-        ArrangeCards();
+        var temp = _firstQuizCardObject;  // 현재 퀴즈를 저장
+        _firstQuizCardObject = _secondQuizCardObject;  // 두 번째 카드를 첫 번째로 변경
+        _secondQuizCardObject = ObjectPool.Instance.GetObject();  // 새로운 카드를 가져옴
+    
+        // 현재 퀴즈 인덱스를 1 증가시키고, 10을 넘어가면 0으로 변경
+        _currentQuizIndex = (_currentQuizIndex + 1) % _quizCount;
+
+        _secondQuizCardObject.GetComponent<QuizCardController>().SetQuiz(_quizDataList[_currentQuizIndex], OnCompletedQuiz);
+
+        SetQuizCardPosition(_firstQuizCardObject, 0);
+        SetQuizCardPosition(_secondQuizCardObject, 1);
+
+        // 이전 카드를 풀로 반환
+        ObjectPool.Instance.ReturnObject(temp);
     }
+
+    public void OnClickNextButton()
+    {
+        ChangeQuizCard();
+    }
+
 }
